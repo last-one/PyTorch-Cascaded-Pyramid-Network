@@ -23,8 +23,6 @@ def parse():
                         dest='train_dir', help='the path of train file')
     parser.add_argument('--val_dir', default=None, nargs='+', type=str,
                         dest='val_dir', help='the path of val file')
-    parser.add_argument('--num_classes', default=1000, type=int,
-                        dest='num_classes', help='num_classes (default: 1000)')
 
     return parser.parse_args()
 
