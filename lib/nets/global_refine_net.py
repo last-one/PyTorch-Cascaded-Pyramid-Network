@@ -48,7 +48,7 @@ class globalNet(nn.Module):
 
         layers = []
 
-        layers.append(torch.nn.UpsamplingBilinear2d(scale_factor=2))
+        layers.append(torch.nn.Upsample(scale_factor=2, mode='bilinear'))
         layers.append(torch.nn.Conv2d(256, 256,
             kernel_size=1, stride=1, bias=True))
 
@@ -66,7 +66,7 @@ class globalNet(nn.Module):
         layers.append(nn.Conv2d(256, num_points,
             kernel_size=3, stride=1, padding=1, bias=False))
         layers.append(nn.BatchNorm2d(num_points))
-        layers.append(nn.UpsamplingBilinear2d(size=output_shape))
+        layers.append(nn.Upsample(size=output_shape, mode='bilinear'))
 
         return nn.Sequential(*layers)
 
@@ -107,7 +107,7 @@ class refineNet(nn.Module):
         for i in range(num):
             layers.append(layer_utils.Bottleneck(input_size, 128))
 
-        layers.append(nn.UpsamplingBilinear2d(size=output_shape))
+        layers.append(nn.Upsample(size=output_shape, mode='bilinear'))
 
         return nn.Sequential(*layers)
 

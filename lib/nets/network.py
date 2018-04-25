@@ -27,7 +27,7 @@ class CPN(nn.Module):
 
 if __name__ == '__main__':
     
-    model = network.CPN((80, 80), 24)
+    model = CPN((80, 80), 24)
     x = torch.autograd.Variable(torch.Tensor(3, 3, 320, 320))
     out =  model(x)
     y = out[-1]
