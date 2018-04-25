@@ -87,7 +87,7 @@ class globalNet(nn.Module):
         x4_1 = self.layer4_1(x[3]) + x3_2
         x4_3 = self.layer4_3(x4_1)
 
-        return [x1_1, x2_1, x3_1, x4_1], [x1_3, x2_3, x3_3, x4_3]
+        return [x4_1, x3_1, x2_1, x1_1], [x4_3, x3_3, x2_3, x1_3]
 
 class refineNet(nn.Module):
 
@@ -128,7 +128,6 @@ class refineNet(nn.Module):
         x2 = self.layer2(x[1])
         x3 = self.layer3(x[2])
         x4 = self.layer4(x[3])
-        print x1.size(), x2.size(), x3.size(), x4.size()
 
         out = torch.cat([x1, x2, x3, x4], dim=1)
         out = self.final_branch(out)
