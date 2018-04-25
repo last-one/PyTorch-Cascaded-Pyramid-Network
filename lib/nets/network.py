@@ -6,14 +6,14 @@ from global_refine_net import *
 
 class CPN(nn.Module):
 
-    def __init__(self, num_point):
+    def __init__(self, output_shape, num_points, pretrained=True):
         super(CPN, self).__init__()
         
-        self.resnet101 = base_model.resnet101(pretrained=True)
+        self.resnet101 = base_model.resnet101(pretrained=pretrained)
 
-        self.global_net = globalNet([2048, 1024, 512, 256], (64, 64), num_point)
+        self.global_net = globalNet([2048, 1024, 512, 256], output_shape, num_points)
 
-        self.refine_net = refineNet(256, (64, 64), num_point)
+        self.refine_net = refineNet(256, output_shape, num_points)
 
     def forward(self, x):
 
@@ -24,3 +24,11 @@ class CPN(nn.Module):
         refine_out = self.refine_net(global_re)
 
         return global_out, refine_out
+
+if __name__ == '__main__':
+    
+    model = network.CPN((80, 80), 24)
+    x = torch.autograd.Variable(torch.Tensor(3, 3, 320, 320))
+    out =  model(x)
+    y = out[-1]
+    print y
