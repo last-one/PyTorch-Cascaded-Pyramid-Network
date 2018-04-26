@@ -47,15 +47,15 @@ def resize(img, mask, kpt, center, ratio):
     Args:
         img    (numpy.ndarray):   Image to be resized.
         mask   (numpy.ndarray):   Mask to be resized.
-        kpt    (list):            Keypoints to be resized.
-        center (list):            Center points to be resized.
+        kpt    (list):            Keypoints to be resized. shape = (key_points_num, 3)
+        center (list):            Center points to be resized. shape = (x, y)
         ratio  (tuple or number): the ratio to resize.
 
     Returns:
         numpy.ndarray: Resized image.
         numpy.ndarray: Resized mask.
-        lists:         Resized keypoints.
-        lists:         Resized center points.
+        list:         Resized keypoints.
+        list:         Resized center points.
     """
 
     if not (isinstance(ratio, numbers.Number) or (isinstance(ratio, collections.Iterable) and len(ratio) == 2)):
@@ -68,27 +68,22 @@ def resize(img, mask, kpt, center, ratio):
         w = 64
     
     if isinstance(ratio, numbers.Number):
-
-        num = len(kpt)
-        length = len(kpt[0])
-        for i in range(num):
-            for j in range(length):
-                kpt[i][j][0] *= ratio
-                kpt[i][j][1] *= ratio
-            center[i][0] *= ratio
-            center[i][1] *= ratio
+        points_num = len(kpt)
+        for i in range(points_num):
+            kpt[i][0] *= ratio
+            kpt[i][1] *= ratio
+        center[0] *= ratio
+        center[1] *= ratio
 
         return cv2.resize(img, (0, 0), fx=ratio, fy=ratio), cv2.resize(mask, (0, 0), fx=ratio, fy=ratio), kpt, center
-
     else:
-        num = len(kpt)
-        length = len(kpt[0])
-        for i in range(num):
-            for j in range(length):
-                kpt[i][j][0] *= ratio[0]
-                kpt[i][j][1] *= ratio[1]
-            center[i][0] *= ratio[0]
-            center[i][1] *= ratio[1]
+        points_num = len(kpt)
+        for i in range(points_num):
+            kpt[i][0] *= ratio[0]
+            kpt[i][1] *= ratio[0]
+        center[0] *= ratio[0]
+        center[1] *= ratio[0]
+
         return np.ascontiguousarray(cv2.resize(img, (0, 0), fx=ratio[0], fy=ratio[1])), np.ascontiguousarray(cv2.resize(mask, (0, 0), fx=ratio[0], fy=ratio[1])), kpt, center
 
 class RandomResized(object):
@@ -127,7 +122,7 @@ class RandomResized(object):
             list:          Randomly resize keypoints.
             list:          Randomly resize center points.
         """
-        ratio = self.get_params(img, self.scale_min, self.scale_max, scale[0])
+        ratio = self.get_params(img, self.scale_min, self.scale_max, scale)
 
         return resize(img, mask, kpt, center, ratio)
 
@@ -202,23 +197,20 @@ def rotate(img, mask, kpt, center, degree):
     img = cv2.warpAffine(img, rotateMat, (new_width, new_height), borderValue=(128, 128, 128))
     mask = cv2.warpAffine(mask, rotateMat, (new_width, new_height), borderValue=(1, 1, 1))
 
-    num = len(kpt)
-    length = len(kpt[0])
-    for i in range(num):
-        for j in range(length):
-            x = kpt[i][j][0]
-            y = kpt[i][j][1]
-            p = np.array([x, y, 1])
-            p = rotateMat.dot(p)
-            kpt[i][j][0] = p[0]
-            kpt[i][j][1] = p[1]
-
-        x = center[i][0]
-        y = center[i][1]
+    points_num = len(kpt)
+    for i in range(points_num):
+        x = kpt[i][0]
+        y = kpt[i][1]
         p = np.array([x, y, 1])
         p = rotateMat.dot(p)
-        center[i][0] = p[0]
-        center[i][1] = p[1]
+        kpt[i][0] = p[0]
+        kpt[i][1] = p[1]
+    x = center[0]
+    y = center[1]
+    p = np.array([x, y, 1])
+    p = rotateMat.dop(p)
+    center[0] = p[0]
+    center[1] = p[1]
 
     return np.ascontiguousarray(img), np.ascontiguousarray(mask), kpt, center
 
@@ -265,12 +257,12 @@ def crop(img, mask, kpt, center, offset_left, offset_up, w, h):
     num = len(kpt)
     length = len(kpt[0])
 
-    for x in range(num):
-        for y in range(length):
-            kpt[x][y][0] -= offset_left
-            kpt[x][y][1] -= offset_up
-        center[x][0] -= offset_left
-        center[x][1] -= offset_up
+    points_num = len(kpt)
+    for i in range(points_num):
+        kpt[i][0] -= offset_left
+        kpt[i][1] -= offset_up
+    center[0] -= offset_left
+    center[1] -= offset_up
 
     height, width, _ = img.shape
     mask = mask.reshape((height, width))
@@ -337,8 +329,9 @@ class RandomCrop(object):
         ratio_y = random.uniform(0, 1)
         x_offset = int((ratio_x - 0.5) * 2 * center_perturb_max)
         y_offset = int((ratio_y - 0.5) * 2 * center_perturb_max)
-        center_x = center[0][0] + x_offset
-        center_y = center[0][1] + y_offset
+
+        center_x = center[0] + x_offset
+        center_y = center[1] + y_offset
 
         return int(round(center_x - output_size[0] / 2)), int(round(center_y - output_size[1] / 2))
 
@@ -369,21 +362,19 @@ def hflip(img, mask, kpt, center):
     img = img[:, ::-1, :]
     mask = mask[:, ::-1, :]
 
-    num = len(kpt)
-    length = len(kpt[0])
-    for i in range(num):
-        for j in range(length):
-            if kpt[i][j][2] <= 1:
-                kpt[i][j][0] = width - 1 - kpt[i][j][0]
-        center[i][0] = width - 1 - center[i][0]
+    points_num = len(kpt)
+    for in range(points_num):
+        if kpt[i][2] <= 1:
+            kpt[i][0] = width - 1 - kpt[i][0]
+    center[0] = width - 1 - center[0]
 
     swap_pair = [[1,4], [2,5],[3,6],[7,10],[8,11],[9,12]]
-    #swap_pair = [[3, 6], [4, 7], [5, 8], [9, 12], [10, 13], [11, 14], [15, 16], [17, 18]]
+
     for x in swap_pair:
-        for i in range(num):
-            temp_point = kpt[i][x[0] - 1]
-            kpt[i][x[0] - 1] = kpt[i][x[1] - 1]
-            kpt[i][x[1] - 1] = temp_point
+        for i in range(points_num):
+            temp_point = kpt[x[0] - 1]
+            kpt[x[0] - 1] = kpt[x[1] - 1]
+            kpt[x[1] - 1] = temp_point
 
     return np.ascontiguousarray(img), np.ascontiguousarray(mask), kpt, center
 

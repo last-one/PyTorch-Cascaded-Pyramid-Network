@@ -30,14 +30,18 @@ def read_json_file(file_dir):
     """
     fp = open(file_dir)
     data = json.load(fp)
+    filenames = []
     kpts = []
     centers = []
     scales = []
 
-    for info in data:
-        kpts.append(x['keypoints'])
-        centers.append(x['pos'])
-        scales.append(x['scale'])
+    for ele in data:
+        filenames.append(ele['filename'])
+        infos = ele['info']
+        for d in infos:
+            kpts.append(d['keypoints'])
+            centers.append(d['pos'])
+            scales.append(d['scale'])
     fp.close()
 
     return kpts, centers, scales
@@ -84,14 +88,18 @@ class CPNFolder(data.Dataset):
 
         height, width, _ = img.shape
 
-        label15 = np.zeros((len(kpt[0]), output_shape[0], output_shape[1]), dtype=np.float32)
+        label15 = np.zeros((len(kpt), output_shape[0], output_shape[1]), dtype=np.float32)
         label15  = generate_heatmap(label15, kpt, (height, width), (15, 15))
-        label11 = np.zeros((len(kpt[0]), output_shape[0], output_shape[1]), dtype=np.float32)
+
+        label11 = np.zeros((len(kpt), output_shape[0], output_shape[1]), dtype=np.float32)
         label11  = generate_heatmap(label11, kpt, (height, width), (11, 11))
-        label9 = np.zeros((len(kpt[0]), output_shape[0], output_shape[1]), dtype=np.float32)
+
+        label9 = np.zeros((len(kpt), output_shape[0], output_shape[1]), dtype=np.float32)
         label9  = generate_heatmap(label9, kpt, (height, width), (9, 9))
-        label7 = np.zeros((len(kpt[0]), output_shape[0], output_shape[1]), dtype=np.float32)
+
+        label7 = np.zeros((len(kpt), output_shape[0], output_shape[1]), dtype=np.float32)
         label7  = generate_heatmap(label7, kpt, (height, width), (7, 7))
+
         valid = np.array(kpt[:, 2], dtype=float32)
         #label15[:,:,0] = 1.0 - np.max(label15[:,:,1:], axis=2) # for background
 
