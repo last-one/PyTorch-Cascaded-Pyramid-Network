@@ -1,0 +1,5 @@
+batch_size: 30
+input_shape: [320, 320]
+num_points: 24
+output_shape: [80, 80]
+top_k: 18
