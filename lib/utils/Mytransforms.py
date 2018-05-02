@@ -41,19 +41,17 @@ def to_tensor(pic):
 
     return img.float()
 
-def resize(img, mask, kpt, center, ratio):
+def resize(img, kpt, center, ratio):
     """Resize the ``numpy.ndarray`` and points as ratio.
 
     Args:
         img    (numpy.ndarray):   Image to be resized.
-        mask   (numpy.ndarray):   Mask to be resized.
         kpt    (list):            Keypoints to be resized. shape = (key_points_num, 3)
         center (list):            Center points to be resized. shape = (x, y)
         ratio  (tuple or number): the ratio to resize.
 
     Returns:
         numpy.ndarray: Resized image.
-        numpy.ndarray: Resized mask.
         list:         Resized keypoints.
         list:         Resized center points.
     """
@@ -64,7 +62,6 @@ def resize(img, mask, kpt, center, ratio):
     h, w, _ = img.shape
     if w < 64:
         img = cv2.copyMakeBorder(img, 0, 0, 0, 64 - w, cv2.BORDER_CONSTANT, value=(128, 128, 128))
-        mask = cv2.copyMakeBorder(mask, 0, 0, 0, 64 - w, cv2.BORDER_CONSTANT, value=(1, 1, 1))
         w = 64
     
     if isinstance(ratio, numbers.Number):
@@ -75,7 +72,7 @@ def resize(img, mask, kpt, center, ratio):
         center[0] *= ratio
         center[1] *= ratio
 
-        return cv2.resize(img, (0, 0), fx=ratio, fy=ratio), cv2.resize(mask, (0, 0), fx=ratio, fy=ratio), kpt, center
+        return cv2.resize(img, (0, 0), fx=ratio, fy=ratio), kpt, center
     else:
         points_num = len(kpt)
         for i in range(points_num):
@@ -84,7 +81,7 @@ def resize(img, mask, kpt, center, ratio):
         center[0] *= ratio[0]
         center[1] *= ratio[0]
 
-        return np.ascontiguousarray(cv2.resize(img, (0, 0), fx=ratio[0], fy=ratio[1])), np.ascontiguousarray(cv2.resize(mask, (0, 0), fx=ratio[0], fy=ratio[1])), kpt, center
+        return np.ascontiguousarray(cv2.resize(img, (0, 0), fx=ratio[0], fy=ratio[1])), kpt, center
 
 class RandomResized(object):
     """Resize the given numpy.ndarray to random size and aspect ratio.
@@ -94,7 +91,7 @@ class RandomResized(object):
         scale_max: the max scale to resize.
     """
 
-    def __init__(self, scale_min=0.5, scale_max=1.1):
+    def __init__(self, scale_min=0.75, scale_max=1.3):
         self.scale_min = scale_min
         self.scale_max = scale_max
 
@@ -108,23 +105,21 @@ class RandomResized(object):
 
         return ratio
 
-    def __call__(self, img, mask, kpt, center, scale):
+    def __call__(self, img, kpt, center, scale):
         """
         Args:
             img     (numpy.ndarray): Image to be resized.
-            mask    (numpy.ndarray): Mask to be resized.
             kpt     (list):          keypoints to be resized.
             center: (list):          center points to be resized.
 
         Returns:
             numpy.ndarray: Randomly resize image.
-            numpy.ndarray: Randomly resize mask.
             list:          Randomly resize keypoints.
             list:          Randomly resize center points.
         """
         ratio = self.get_params(img, self.scale_min, self.scale_max, scale)
 
-        return resize(img, mask, kpt, center, ratio)
+        return resize(img, kpt, center, ratio)
 
 class TestResized(object):
     """Resize the given numpy.ndarray to the size for test.
@@ -147,37 +142,33 @@ class TestResized(object):
         
         return (output_size[0] * 1.0 / width, output_size[1] * 1.0 / height)
 
-    def __call__(self, img, mask, kpt, center):
+    def __call__(self, img, kpt, center):
         """
         Args:
             img     (numpy.ndarray): Image to be resized.
-            mask    (numpy.ndarray): Mask to be resized.
             kpt     (list):          keypoints to be resized.
             center: (list):          center points to be resized.
 
         Returns:
             numpy.ndarray: Randomly resize image.
-            numpy.ndarray: Randomly resize mask.
             list:          Randomly resize keypoints.
             list:          Randomly resize center points.
         """
         ratio = self.get_params(img, self.size)
 
-        return resize(img, mask, kpt, center, ratio)
+        return resize(img, kpt, center, ratio)
 
-def rotate(img, mask, kpt, center, degree):
+def rotate(img, kpt, center, degree):
     """Rotate the ``numpy.ndarray`` and points as degree.
 
     Args:
         img    (numpy.ndarray): Image to be rotated.
-        mask   (numpy.ndarray): Mask to be rotated.
         kpt    (list):          Keypoints to be rotated.
         center (list):          Center points to be rotated.
         degree (number):        the degree to rotate.
 
     Returns:
         numpy.ndarray: Resized image.
-        numpy.ndarray: Resized mask.
         list:          Resized keypoints.
         list:          Resized center points.
     """
@@ -195,7 +186,6 @@ def rotate(img, mask, kpt, center, degree):
     rotateMat[1, 2] += (new_height / 2.) - img_center[1]
 
     img = cv2.warpAffine(img, rotateMat, (new_width, new_height), borderValue=(128, 128, 128))
-    mask = cv2.warpAffine(mask, rotateMat, (new_width, new_height), borderValue=(1, 1, 1))
 
     points_num = len(kpt)
     for i in range(points_num):
@@ -212,7 +202,7 @@ def rotate(img, mask, kpt, center, degree):
     center[0] = p[0]
     center[1] = p[1]
 
-    return np.ascontiguousarray(img), np.ascontiguousarray(mask), kpt, center
+    return np.ascontiguousarray(img), kpt, center
 
 class RandomRotate(object):
     """Rotate the input numpy.ndarray and points to the given degree.
@@ -236,11 +226,10 @@ class RandomRotate(object):
 
         return degree
 
-    def __call__(self, img, mask, kpt, center):
+    def __call__(self, img, kpt, center):
         """
         Args:
             img    (numpy.ndarray): Image to be rotated.
-            mask   (numpy.ndarray): Mask to be rotated.
             kpt    (list):          Keypoints to be rotated.
             center (list):          Center points to be rotated.
 
@@ -250,9 +239,9 @@ class RandomRotate(object):
         """
         degree = self.get_params(self.max_degree)
 
-        return rotate(img, mask, kpt, center, degree)
+        return rotate(img, kpt, center, degree)
 
-def crop(img, mask, kpt, center, offset_left, offset_up, w, h):
+def crop(img, kpt, center, offset_left, offset_up, w, h):
 
     num = len(kpt)
     length = len(kpt[0])
@@ -261,17 +250,15 @@ def crop(img, mask, kpt, center, offset_left, offset_up, w, h):
     for i in range(points_num):
         kpt[i][0] -= offset_left
         kpt[i][1] -= offset_up
+        if kpt[i][0] < 0 or kpt[i][0] >= w or kpt[i][1] < 0 or kpt[i][1] >= h:
+            kpt[i][2] = 0
     center[0] -= offset_left
     center[1] -= offset_up
 
     height, width, _ = img.shape
-    mask = mask.reshape((height, width))
 
     new_img = np.empty((h, w, 3), dtype=np.float32)
     new_img.fill(128)
-
-    new_mask = np.empty((h, w), dtype=np.float32)
-    new_mask.fill(1)
 
     st_x = 0
     ed_x = w
@@ -296,9 +283,8 @@ def crop(img, mask, kpt, center, offset_left, offset_up, w, h):
         or_ed_y = height
 
     new_img[st_y: ed_y, st_x: ed_x, :] = img[or_st_y: or_ed_y, or_st_x: or_ed_x, :].copy()
-    new_mask[st_y: ed_y, st_x: ed_x] = mask[or_st_y: or_ed_y, or_st_x: or_ed_x].copy()
 
-    return np.ascontiguousarray(new_img), np.ascontiguousarray(new_mask), kpt, center
+    return np.ascontiguousarray(new_img), kpt, center
 
 class RandomCrop(object):
     """Crop the given numpy.ndarray and  at a random location.
@@ -335,48 +321,43 @@ class RandomCrop(object):
 
         return int(round(center_x - output_size[0] / 2)), int(round(center_y - output_size[1] / 2))
 
-    def __call__(self, img, mask, kpt, center):
+    def __call__(self, img, kpt, center):
         """
         Args:
             img (numpy.ndarray): Image to be cropped.
-            mask (numpy.ndarray): Mask to be cropped.
             kpt (list): keypoints to be cropped.
             center (list): center points to be cropped.
 
         Returns:
             numpy.ndarray: Cropped image.
-            numpy.ndarray: Cropped mask.
             list:          Cropped keypoints.
             list:          Cropped center points.
         """
 
         offset_left, offset_up = self.get_params(img, center, self.size, self.center_perturb_max)
 
-        return crop(img, mask, kpt, center, offset_left, offset_up, self.size[0], self.size[1])
+        return crop(img, kpt, center, offset_left, offset_up, self.size[0], self.size[1])
 
-def hflip(img, mask, kpt, center):
+def hflip(img, kpt, center):
 
     height, width, _ = img.shape
-    mask = mask.reshape((height, width, 1))
 
     img = img[:, ::-1, :]
-    mask = mask[:, ::-1, :]
 
     points_num = len(kpt)
     for in range(points_num):
-        if kpt[i][2] <= 1:
+        if kpt[i][2] >= 1:
             kpt[i][0] = width - 1 - kpt[i][0]
     center[0] = width - 1 - center[0]
 
     swap_pair = [[1,4], [2,5],[3,6],[7,10],[8,11],[9,12]]
 
     for x in swap_pair:
-        for i in range(points_num):
-            temp_point = kpt[x[0] - 1]
-            kpt[x[0] - 1] = kpt[x[1] - 1]
-            kpt[x[1] - 1] = temp_point
+        temp_point = kpt[x[0] - 1].copy()
+        kpt[x[0] - 1] = kpt[x[1] - 1].copy()
+        kpt[x[1] - 1] = temp_point.copy()
 
-    return np.ascontiguousarray(img), np.ascontiguousarray(mask), kpt, center
+    return np.ascontiguousarray(img), kpt, center
 
 class RandomHorizontalFlip(object):
     """Random horizontal flip the image.
@@ -388,11 +369,10 @@ class RandomHorizontalFlip(object):
     def __init__(self, prob=0.5):
         self.prob = prob
         
-    def __call__(self, img, mask, kpt, center):
+    def __call__(self, img, kpt, center):
         """
         Args:
             img    (numpy.ndarray): Image to be flipped.
-            mask   (numpy.ndarray): Mask to be flipped.
             kpt    (list):          Keypoints to be flipped.
             center (list):          Center points to be flipped.
 
@@ -401,8 +381,8 @@ class RandomHorizontalFlip(object):
             list: Randomly flipped points.
         """
         if random.random() < self.prob:
-            return hflip(img, mask, kpt, center)
-        return img, mask, kpt, center
+            return hflip(img, kpt, center)
+        return img, kpt, center
 
 class Compose(object):
     """Composes several transforms together.
@@ -420,12 +400,12 @@ class Compose(object):
     def __init__(self, transforms):
         self.transforms = transforms
 
-    def __call__(self, img, mask, kpt, center, scale=None):
+    def __call__(self, img, kpt, center, scale=None):
 
         for t in self.transforms:
             if isinstance(t, RandomResized):
-                img, mask, kpt, center = t(img, mask, kpt, center, scale)
+                img, kpt, center = t(img, kpt, center, scale)
             else:
-                img, mask, kpt, center = t(img, mask, kpt, center)
+                img, kpt, center = t(img, kpt, center)
 
-        return img, mask, kpt, center
+        return img, kpt, center

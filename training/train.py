@@ -6,7 +6,9 @@ import torch.optim
 import argparse
 import time
 from nets.network import *
-from loss.loss_function import l2_loss
+from loss.loss_function import L2_loss
+from utils.Mydataloader import CPNFolder
+import utils.Mytransforms
 
 def parse():
 
@@ -71,10 +73,10 @@ def train_val(model, args, cfg):
     cudnn.benchmark = True
     
     train_loader = torch.utils.data.DataLoader(
-            MydataFolder.CPNFolder(traindir, 8,
+            CPNFolder(traindir, config.output_shape,
                 Mytransforms.Compose([Mytransforms.RandomResized(),
                 Mytransforms.RandomRotate(40),
-                Mytransforms.RandomCrop(368),
+                Mytransforms.RandomCrop(320),
                 Mytransforms.RandomHorizontalFlip(),
             ])),
             batch_size=config.batch_size, shuffle=True,
@@ -82,8 +84,8 @@ def train_val(model, args, cfg):
 
     if config.test_interval != 0 and args.val_dir is not None:
         val_loader = torch.utils.data.DataLoader(
-                MydataFolder.CPNFolder(valdir, 8,
-                    Mytransforms.Compose([Mytransforms.TestResized(368),
+                CPNFolder(valdir, config.output_shape,
+                    Mytransforms.Compose([Mytransforms.TestResized(320),
                 ])),
                 batch_size=config.batch_size, shuffle=False,
                 num_workers=config.workers, pin_memory=True)
@@ -129,7 +131,7 @@ def train_val(model, args, cfg):
 
             global_out, refine_out = model(input_var)
 
-            global_loss, refine_loss = l2_loss(global_out, refine_out, labels,valid, config.top_k, config.batch_size, config.num_points)
+            global_loss, refine_loss = L2_loss(global_out, refine_out, labels,valid, config.top_k, config.batch_size, config.num_points)
             
             loss = 0.0
 
@@ -191,7 +193,7 @@ def train_val(model, args, cfg):
         
                     global_out, refine_out = model(input_var)
         
-                    global_loss, refine_loss = l2_loss(global_out, refine_out, labels,valid, config.top_k, config.batch_size, config.num_points)
+                    global_loss, refine_loss = L2_loss(global_out, refine_out, labels,valid, config.top_k, config.batch_size, config.num_points)
                     
                     loss = 0.0
         

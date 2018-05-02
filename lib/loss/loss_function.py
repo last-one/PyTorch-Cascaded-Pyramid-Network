@@ -11,7 +11,7 @@ def ohem(loss, top_k, batch_size):
 
     return ohem_loss / batch_size
 
-def l2_loss(global_preds, refine_pred, targets, valid, top_k, batch_size, num_points):
+def L2_loss(global_preds, refine_pred, targets, valid, top_k, batch_size, num_points):
 
     global_losses = []
     
